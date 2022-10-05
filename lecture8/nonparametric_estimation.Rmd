@@ -1,0 +1,50 @@
+---
+title: "Nonparametric Estimation"
+author: Yan Shuo Tan
+output: html_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(coin)
+source("util.R")
+```
+
+## Empirical CDFs
+
+```{r Normal distribution}
+
+make_ecdf_plot(rnorm, pnorm)
+
+```
+
+```{r Exponential distribution}
+
+make_ecdf_plot(rexp, pexp, left_lim = 0, right_lim = 4)
+
+```
+
+## Histograms
+
+```{r Empirical probability distribution}
+
+make_epd_plot(rnorm, dnorm)
+```
+```{r Histogram}
+
+set.seed(42)
+nsamples <- 50
+nbins <- 10
+samples <- tibble(x = rnorm(50))
+samples %>% ggplot() + geom_histogram(aes(x), bins = nbins)
+```
+
+
+```{r Bias variance tradeoff curve}
+
+grid <- seq(0.1, 8, length.out = 100)
+tibble(M = grid, MSE = map_dbl(M, ~ . + 1/.)) %>% ggplot() + 
+  geom_line(aes(x = M, y = MSE)) + theme(axis.text = element_blank(),
+                                         axis.ticks = element_blank())
+```

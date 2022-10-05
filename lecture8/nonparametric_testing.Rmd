@@ -1,0 +1,130 @@
+---
+title: "Nonparametric Testing"
+author: Yan Shuo Tan
+output: html_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(coin)
+source("util.R")
+```
+
+## T-test failure
+
+We make a dataset for sales figures for two employees, Dwight and Jim, of a paper products company. `sales_figs` is a data frame that shows their daily sales numbers over a period of 50 days.
+
+```{r Making the dataset}
+
+n_samples <- 100
+sales_figs <- make_sales_figs(n_samples, seed=42)
+sales_figs
+
+```
+```{r Take the mean}
+
+sales_means <- sales_figs %>% map_dbl(mean)
+sales_means
+```
+
+Jim has a higher mean sales figure than Dwight. Is Jim a better salesperson? Or was this just luck? To test this rigorously, do statistical hypothesis testing.
+
+Let $X_1,X_2,\ldots,X_n$ be the daily sales numbers for Jim, and let $Y_1,Y_2,\ldots,Y_n$ be the daily sales numbers for Dwight. Suppose that all observations are independent of each other, and furthermore that $X_i \sim N(\mu_X,\sigma_X^2)$, $Y_i \sim N(\mu_Y, \sigma_Y^2)$ for $i=1,\ldots,n$. We set up the following null and alternate hypotheses
+$$
+H_0: \mu_X = \mu_Y
+$$
+$$
+H_1: \mu_X > \mu_Y
+$$
+The standard test for these two hypotheses, if $\sigma_X$ and $\sigma_Y$ are unknown, is to do a (two-sample) $t$-test:
+$$
+t = \frac{\bar{X} - \bar{Y}}{\sqrt{\hat{\sigma}_X^2/n + \hat{\sigma}_Y^2/n}},
+$$
+where
+$$
+\hat\sigma_X^2 = \frac{1}{n-1}\sum_{i=1}(X_i - \bar X)^2, \quad\hat\sigma_Y^2 = \frac{1}{n-1}\sum_{i=1}(Y_i - \bar Y)^2
+$$
+Can check that this is the likelihood ratio test for this problem. Let's now do the test:
+
+```{r Two sample t-test}
+
+t_test <- t.test(sales_figs$Jim, sales_figs$Dwight, alternative = "greater")
+t_test
+
+```
+We get a p-value of 0.085, i.e. not significant... But let's check if the assumptions for the test hold. 
+
+```{r Plot densities}
+
+sales_figs %>% pivot_longer(cols = c("Jim", "Dwight"), names_to = "Employee", values_to = "Sales") %>% 
+  ggplot() + geom_density(aes(x = Sales, fill = Employee), alpha=0.25) + geom_vline(xintercept = sales_means)
+
+```
+
+The distributions are clearly non-Gaussian. Should use a nonparametric test instead... (back to slides) We will do a permutation test.
+
+## Non-parametric two independent sample tests
+
+```{r Permutation test}
+
+perm_results <- get_tstat_perm_results(sales_figs$Jim, sales_figs$Dwight)
+annotation <- tibble(
+   x = c(2.2, 2.4),
+   y = c(0.3, 0.1),
+   label = c("t-statistic value = 0.12", sprintf("area = %.5f", mean(perm_results > t_test$statistic)))
+)
+ggplot(tibble(Permuted_values = perm_results)) + geom_density(aes(x = Permuted_values), fill = "red", alpha = 0.25) + 
+  geom_vline(xintercept = t_test$statistic) + geom_text(data = annotation, aes(x = x, y = y, label = label))
+mean(perm_results > t_test$statistic)
+```
+The p-value doesn't change very much, but at least we can rest assured that it is legitimate and does not rely on false assumptions. How can we increase the power of our test? (back to slides) Solution is to use ranks to remove the influence of extreme values. The name of this test is the Mann-Whitney U-test.
+
+```{r Mann-Whitney U-test}
+
+sales_long <- sales_figs %>% pivot_longer(cols = c("Jim", "Dwight"), names_to = "Employee", values_to = "Sales") %>% transmute(Employee = factor(Employee, levels = c("Jim", "Dwight")), Sales)
+wilcox_test(Sales ~ Employee, data = sales_long, alternative = "greater")
+
+```
+
+We now repeat this experiment 500 times with different random seeds
+
+```{r Mann-Whitney test pt2}
+n_reps <- 500
+t_test_results <- rep(0, n_reps)
+mw_test_results <- rep(0, n_reps)
+for (i in seq(n_reps)) {
+  sales_figs_temp <- make_sales_figs(n_samples)
+  t_test_results[i] <- t.test(sales_figs$Jim, sales_figs$Dwight, alternative = "greater")$p.value
+  sales_long <- sales_figs_temp %>% pivot_longer(cols = c("Jim", "Dwight"), names_to = "Employee", values_to = "Sales") %>% 
+    transmute(Employee = factor(Employee, levels = c("Jim", "Dwight")), Sales)
+  mw_test_results[i] <- wilcox_test(Sales ~ Employee, data = sales_long, alternative = "greater") %>% pvalue
+}
+tibble(t_test = t_test_results, mw_test = mw_test_results) %>% map_dbl(mean)
+
+```
+
+## Paired sample tests
+
+Can we improve the power of our test even more?
+
+```{r Sales figures scatter}
+ggplot(sales_figs) + geom_point(aes(x = Jim, y = Dwight)) + ggtitle("Sales figures for Jim and Dwight on the same days")
+
+```
+
+We see that there is strong positive correlation between the sales numbers of both employees. This is natural because there are time-varying effects, e.g. there may be more demand for paper products on some days (e.g. close to tax season). To exploit this, we should use a paired sample test.
+
+```{r Paired two sample t-test}
+
+t_test <- t.test(sales_figs$Jim, sales_figs$Dwight, paired = TRUE, alternative = "greater")
+t_test
+
+```
+
+```{r Signed rank test}
+
+signed_rank_test <- wilcox.test(sales_figs$Jim, sales_figs$Dwight, paired = TRUE, alternative = "greater")
+signed_rank_test
+
+```
