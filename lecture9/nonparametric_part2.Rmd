@@ -1,0 +1,129 @@
+---
+title: "Nonparametric Density Estimation Part 2 and Nonparametric Regression"
+output: html_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+library(tidyverse)
+library(HoRM)
+source("l9_util.R")
+```
+
+## Histograms
+
+```{r Histogram comparison with population density}
+set.seed(42)
+nsamples <- 50
+nbins <- 10
+samples <- tibble(x = rnorm(50))
+grid <- seq(-3, 3, length.out = 100)
+pdf_plot_df <- tibble(x = grid, vals = dnorm(grid))
+samples %>% ggplot(aes(x = x)) + stat_bin(aes(y = ..density..), geom = "step", bins = nbins, color = "blue") +
+  geom_line(data = pdf_plot_df, mapping = aes(x = x, y = vals))
+
+```
+
+## KDE
+
+```{r KDE}
+set.seed(42)
+nsamples <- 5
+nbins <- 10
+samples <- tibble(x = rnorm(50))
+grid <- seq(-3, 3, length.out = 100)
+pdf_plot_df <- tibble(x = grid, vals = dnorm(grid))
+samples %>% ggplot(aes(x = x)) + geom_density(color = "blue") +
+  geom_line(data = pdf_plot_df, mapping = aes(x = x, y = vals))
+
+```
+## Nonparametric regression
+
+Remark: We use `geom_smooth` to generate local regression plots. `geom_smooth` calls a method called `loess` to generate these fits and plots. `loess` is slightly different from Nadaraya-Watson kernel regression, but produce similar results. It has better technical support in R and should be the method you 
+
+```{r Nonparametric regression motivation}
+data_df <- make_data(nsamples = 100, eps = 0.5)
+grid <- seq(0, 5, length.out = 100)
+r_func_plot_df <- tibble(x = grid, vals = reg_func(grid))
+data_df %>% ggplot(aes(x = x, y = y)) + 
+  geom_smooth() +
+  geom_point() +
+  # geom_smooth(method = "lm", se = FALSE)
+  geom_line(data = r_func_plot_df, mapping = aes(x = x, y = vals), color = "red") + ylim(-1.5, 3)
+
+```
+
+```{r Regressogram}
+data_df <- make_data(nsamples = 100, eps = 0.5)
+regressogram(x = data_df$x, y = data_df$y)
+
+```
+```{r kernel regression motivation}
+data_df <- make_data(nsamples = 100, eps = 0.5)
+data_df <- data_df %>% mutate(in_window = abs(x - 1) < 0.5) 
+data_df %>% ggplot(aes(x = x, y = y)) + 
+  geom_point() +
+  geom_point(data = filter(data_df, in_window), color = "blue")
+
+```
+
+```{r Bandwidth importance}
+data_df <- make_data(nsamples = 100, eps = 0.5)
+grid <- seq(0, 5, length.out = 100)
+r_func_plot_df <- tibble(x = grid, vals = reg_func(grid))
+data_df %>% ggplot(aes(x = x, y = y)) + 
+  stat_smooth(se = FALSE, span = 0.2, method.args = list(degree = 0)) +
+  geom_point() +
+  geom_line(data = r_func_plot_df, mapping = aes(x = x, y = vals), color = "red") + ylim(-1.5, 3)
+
+```
+
+Note that the `span` parameter for `loess` is a form of bandwidth. It is the fraction of data points used to get the local estimate. The subsetted data points are then weighted using a weight function. For more information see (here)[https://en.wikipedia.org/wiki/Local_regression].
+
+```{r Overfitting with LOESS}
+data_df <- make_data(nsamples = 100, eps = 0.5)
+h_range <- seq(0.05, 0.75, length.out = 20)
+rss_vals <- rep(0, 20)
+loess_fits <- vector("list", 20)
+
+for (i in seq_along(h_range)) {
+  h <- h_range[[i]]
+  loess_fits[[i]] <- loess(y ~ x, data = data_df, degree = 0, span = h)
+  rss_vals[[i]] <- mean(loess_fits[[i]]$residuals ** 2)
+}
+ggplot(data = tibble(h = h_range, RSS = rss_vals)) + 
+  geom_line(aes(x = h, y = RSS))
+```
+
+```{r Overfitting with NW kernel regression}
+
+data_df <- make_data(nsamples = 100, eps = 0.5)
+h_range <- seq(0.05, 1, length.out = 20)
+rss_vals <- rep(0, 20)
+data_df <- data_df %>% arrange(x)
+
+for (i in seq_along(h_range)) {
+  h <- h_range[[i]]
+  loess_fits[[i]] <- loess(y ~ x, data = data_df, degree = 0, span = h)
+  rss_vals[[i]] <- mean((ksmooth(data_df$x, data_df$y, 
+                                 bandwidth = h, x.points = data_df$x)$y - 
+                           data_df$y)** 2)
+}
+ggplot(data = tibble(h = h_range, RSS = rss_vals)) + 
+  geom_line(aes(x = h, y = RSS)) + 
+  ggtitle("Training error vs bandwidth for NW kernel regressions")
+```
+```{r Overfitting plot}
+
+data_df <- make_data(nsamples = 100, eps = 0.5)
+h_small <- 0.05
+data_df <- data_df %>% arrange(x)
+NW_fit <- ksmooth(data_df$x, data_df$y, bandwidth = h_small, x.points = data_df$x)
+NW_fit <- tibble(x = NW_fit$x, y = NW_fit$y)
+r_func_plot_df <- tibble(x = grid, vals = reg_func(grid))
+ggplot() + geom_line(data = NW_fit, aes(x = x, y = y), color = "blue") +
+  geom_point(data = data_df, mapping = aes(x = x, y = y)) +
+  geom_line(data = r_func_plot_df, mapping = aes(x = x, y = vals), color = "red") +
+  ggtitle("NW fit when h=0.05")
+
+```
