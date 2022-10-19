@@ -134,3 +134,29 @@ F_{\hat{\theta}}(x) & = \mathbb{P}\lbrace \max_i X_i \leq x \rbrace \\
 & = x^n
 \end{align*}
 $$
+Clearly the bootstrap distribution does not match the true density.
+Let us try the parametric bootstrap. The max likelihood estimate for $\theta$ is
+$$
+\hat{\theta}_{MLE} = \max_{1 \leq i \leq n} X_i
+$$
+This is because
+$$
+f(\theta) = (1/\theta)^n 1(\theta \geq \max X_i).
+$$
+
+The parametric bootstrap therefore simulates from the uniform distribution on $[0, \hat{\theta}_{MLE}]$.
+
+```{r Parametric bootstrap}
+set.seed(42)
+theta <- 1
+X <- runif(50, min = 0, max = theta)
+print(max(X))
+max_boot_param <- vector("numeric", 1000)
+for (b in 1:1000) {
+  max_boot_param[[b]] <- max(runif(50, min = 0, max = max(X)))
+}
+ggplot(data = tibble(T = max_boot_param)) + geom_density(aes(x = T))
+
+```
+
+This is much closer to the true density. Why is nonparametric bootstrap bad? (Homework)
