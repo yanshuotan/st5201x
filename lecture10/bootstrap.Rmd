@@ -1,0 +1,136 @@
+---
+title: "Bootstrap"
+author: Yan Shuo Tan
+output: html_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(boot)
+source("bootstrap_util.R")
+```
+
+We will demonstrate the bootstrap by applying it to a dataset comprising student grades. This dataset is described in Wasserman exercise 2 (page 39), and also apparently in the original bootstrap paper.
+LSAT is an examination for entrance to law school.
+
+```{r Create scores dataframe}
+scores <- tibble(lsat = c(576, 635, 558, 578, 666, 580, 555, 661, 651, 605, 653, 575, 545, 572, 594),
+                 gpa = c(3.39, 3.30, 2.81, 3.03, 3.44, 3.07, 3.00, 3.43, 3.36, 3.13, 3.12, 2.74, 2.76, 2.88, 3.96))
+```
+
+## Sample mean
+
+Warm-up: Recall that the bootstrap is meant to estimate the distribution of a statistic $T$. For the warm-up, we choose $T$ to be the sample mean for gpa. Note the general code in `bootstrap_util.R`
+
+```{r Sample mean}
+sm_boot <- bootstrap0(x = scores$gpa, 
+                      B = 1000,
+                      func = mean)
+head(sm_boot, n = 10)
+```
+
+```{r Plot bootstrap of sample mean}
+ggplot(data = tibble(T = sm_boot)) + geom_density(aes(x = T))
+```
+
+The variance of the sample mean can be estimated using that of the empirical distribution `sm_boot`.
+
+```{r Variance of sample mean}
+var(sm_boot)
+```
+
+We now compute confidence intervals using the different methods.
+
+```{r Confidence intervals for sample mean}
+CIs <- matrix(0, nrow = 4, ncol = 2)
+ci_funcs <-  c(normal_interval, percentile_interval, pivotal_interval, studentized_pivotal_interval)
+for (i in 1:4) {
+  CIs[i, ] <- ci_funcs[[i]](x = scores$gpa, 
+                            B = 1000, 
+                            func = mean, 
+                            alpha = 0.05)
+}
+CI_df <- tibble(lower = CIs[, 1], upper = CIs[, 2])
+CI_df[["type"]] <- c("Normal interval", "Percentile interval",
+                     "Pivotal interval", "Studentized pivotal interval")
+CI_df %>% select(type, everything())
+```
+
+Note that the studentized pivotal interval requires a double bootstrap.
+
+```{r Double bootstrap}
+double_bootstrap0(x = scores$gpa, B = 100, mean)
+```
+
+## Correlation between LSAT and GPA
+
+We now try to estimate the correlation coefficient
+$$
+\text{Corr}(Y,Z) = \frac{\text{Cov}(Y,Z)}{\text{Var}(Y)^{1/2}\text{Var}(Z)^{1/2}}
+$$
+where $Y$ and $Z$ refer to LSAT and GPA scores respectively.
+
+```{r Correlation}
+print(corr(scores))
+corr_boot <- bootstrap0(x = scores, 
+                        B = 1000,
+                        func = corr)
+head(corr_boot, n = 10)
+```
+
+```{r Plot bootstrap distribution of sample correlation}
+ggplot(data = tibble(T = corr_boot)) + geom_density(aes(x = T))
+```
+
+The variance of the sample correlation can be estimated using that of the empirical distribution `corr_boot`.
+
+```{r Variance of sample correlation}
+var(corr_boot)
+```
+
+We now compute confidence intervals using the different methods.
+
+```{r Confidence intervals for correlation}
+CIs <- matrix(0, nrow = 4, ncol = 2)
+ci_funcs <-  c(normal_interval, percentile_interval, pivotal_interval, studentized_pivotal_interval)
+for (i in 1:4) {
+  CIs[i, ] <- ci_funcs[[i]](x = scores, 
+                            B = 1000, 
+                            func = corr, 
+                            alpha = 0.05)
+}
+CI_df <- tibble(lower = CIs[, 1], upper = CIs[, 2])
+CI_df[["type"]] <- c("Normal interval", "Percentile interval",
+                     "Pivotal interval", "Studentized pivotal interval")
+CI_df %>% select(type, everything())
+```
+
+## Where bootstrap fails: The sample maximum
+
+
+
+```{r}
+set.seed(42)
+theta <- 1
+X <- runif(50, min = 0, max = theta)
+print(max(X))
+max_boot <- bootstrap0(x = X, 
+                       B = 1000,
+                       func = max)
+
+```
+
+```{r Plot bootstrap distribution of sample mean}
+ggplot(data = tibble(T = max_boot)) + geom_density(aes(x = T))
+```
+
+True distribution of $\hat{\theta}$ satisfies
+$$
+\begin{align*}
+F_{\hat{\theta}}(x) & = \mathbb{P}\lbrace \max_i X_i \leq x \rbrace \\
+& = \mathbb{P}\lbrace X_i \leq x \rbrace^n \\
+& = F(x)^n \\
+& = x^n
+\end{align*}
+$$
