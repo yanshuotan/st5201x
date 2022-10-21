@@ -86,7 +86,7 @@ ggplot(data = tibble(T = corr_boot)) + geom_density(aes(x = T))
 The variance of the sample correlation can be estimated using that of the empirical distribution `corr_boot`.
 
 ```{r Variance of sample correlation}
-var(corr_boot)
+sqrt(var(corr_boot))
 ```
 
 We now compute confidence intervals using the different methods.
@@ -107,7 +107,6 @@ CI_df %>% select(type, everything())
 ```
 
 ## Where bootstrap fails: The sample maximum
-
 
 
 ```{r}
@@ -141,7 +140,7 @@ $$
 $$
 This is because
 $$
-f(\theta) = (1/\theta)^n 1(\theta \geq \max X_i).
+f(x|\theta) = (1/\theta)^n 1(\theta \geq \max X_i).
 $$
 
 The parametric bootstrap therefore simulates from the uniform distribution on $[0, \hat{\theta}_{MLE}]$.
