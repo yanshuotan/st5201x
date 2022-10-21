@@ -1,3 +1,28 @@
+# Tutorial 9 Question 1 ---------------------------------------------------
+
+set.seed(42)
+theta <- 1
+nsamp <- 50
+X <- runif(nsamp)
+nonparametric_boot <- # FILL IN
+parametric_boot <- vector("numeric", 1000)
+for (b in 1:1000) {
+  parametric_boot[[b]] <- # FILL IN
+}
+true_density <- function(x, nsamp = 50) {
+  # FILL IN
+}
+grid <- seq(0, 1, length.out = 100)
+plot_df <- tibble(x = grid, 
+                  true = true_density(grid),
+                  parametric = ecdf(parametric_boot)(grid),
+                  nonparametric = ecdf(nonparametric_boot)(grid)) %>%
+  pivot_longer(cols = c("true", "parametric", "nonparametric"), 
+               names_to = "type", values_to = "y")
+plot_df <- plot_df %>% mutate(type = factor(type))
+ggplot(plot_df) + geom_line(aes(x = x, y = y, color = type))
+
+
 # Tutorial 9 Question 4 ---------------------------------------------------
 
 T_stat <- function(X) {
