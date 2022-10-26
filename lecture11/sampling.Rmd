@@ -1,0 +1,42 @@
+---
+title: "Sampling"
+author: Yan Shuo Tan
+output: html_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+source("sampling_util.R")
+```
+
+```{r Plot the mystery function}
+
+ggplot(data.frame(x = c(0, 1)), aes(x = x)) + 
+  stat_function(fun = mystery_func)
+```
+
+```{r Find the maximum of the function}
+optim(0.5, fn = mystery_func, control = list(fnscale=-1))
+```
+
+```{r Generate samples}
+S <- 10000
+M <- 4.99
+proposal_generator <- function() {
+  runif(1)
+}
+sampling_results <- rej_sampling_1d(S, target = mystery_func, proposal = dunif, proposal_generator = proposal_generator, M = M)
+```
+
+```{r Estimate c}
+c_hat <- sampling_results$accept_rate * M
+c_hat
+```
+
+
+```{r Plot results}
+ggplot(data = tibble(x = sampling_results$samples)) + 
+  geom_histogram(aes(x = x, y = ..density..), bins = 50) +
+  stat_function(data = tibble(x = c(0, 1)), fun = function(x) {1 / c_hat * mystery_func(x)})
+```
