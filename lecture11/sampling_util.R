@@ -3,6 +3,7 @@
 
 rej_sampling_1d <- function(S, target, proposal, 
                             proposal_generator, M) {
+  # Function that performs rejection sampling in 1D
   # S: Number of desired samples from the target
   # target: A function that evaluates to a multiple of the target 
   # density (ch)
@@ -19,13 +20,14 @@ rej_sampling_1d <- function(S, target, proposal,
     U <- runif(1)
     if (M * proposal(theta) * U < target(theta)){
       s <- s+1
-      samples[[s]] <- theta }}
+      samples[[s]] <- theta }
+    }
   accept_rate <- S/T
   list(accept_rate = accept_rate, samples = samples)
 }
 
-rej_sampling_log_1d <- function(S, log_target, log_proposal, 
-                            proposal_generator, logM) {
+rej_sampling_log <- function(S, log_target, log_proposal, 
+                             proposal_generator, logM) {
   # S: Number of desired samples from the target
   # log_target: A function that evaluates to log of a multiple of the target 
   # density (ch)
@@ -33,32 +35,46 @@ rej_sampling_log_1d <- function(S, log_target, log_proposal,
   # proposal_generator: A function that gives a random sample from the proposal 
   # density
   
-  samples <- rep(0, S)
+  samples <- matrix(0, S, d)
   s <- 0             # no. of samples collected
   T <- 0             # no. of iterations performed
   while (s < S){
     T <- T+1
     theta <- proposal_generator()
     U <- runif(1)
-    if (log(U) < log_proposal(theta) - log_target(theta) - logM){
+    if (log(U) < log_target(theta) - log_proposal(theta) - logM){
       s <- s+1
-      samples[[s]] <- theta }}
+      samples[s, ] <- theta }}
   accept_rate <- S/T
   list(accept_rate = accept_rate, samples = samples)
 }
 
-get_opt_M <- function(log_target, log_proposal, init) {
+get_opt_logM <- function(log_target, log_proposal, init) {
+  # Function to compute log M
   diff <- function(x) {
     log_target(x) - log_proposal(x)
   }
-  optim(init, fn = diff, control = list(fnscale=-1))
+  optim(init, fn = diff, control = list(fnscale=-1))$value
+}
+
+get_opt_M <- function(target, proposal, init) {
+  # Function to compute M
+  ratio <- function(x) {
+    target(x)/proposal(x)
+  }
+  optim(init, fn = ratio, control = list(fnscale=-1))$value
 }
 
 mystery_func <- function(x) {
   y <- dnorm(x, 0.25, 0.1) + dnorm(x, 0.75, 0.1) + 1
-  y[x > 0 & x < 0] <- 0
+  y[x < 0 | x > 1] <- 0
   y
 }
+
+
+# Importance sampling -----------------------------------------------------
+
+
 
 # Random walk  ------------------------------------------------------
 

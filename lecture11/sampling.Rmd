@@ -1,5 +1,5 @@
 ---
-title: "Sampling"
+title: "Rejection sampling"
 author: Yan Shuo Tan
 output: html_document
 ---
@@ -10,15 +10,19 @@ library(tidyverse)
 source("sampling_util.R")
 ```
 
-```{r Plot the mystery function}
+In this demo, we show how to do rejection sampling for a density $f(x)$. We have access to a function $h(x) = cf(x)$ whose graph is plotted below and which is available to us as `myster_func`.
 
+```{r Plot the mystery function}
 ggplot(data.frame(x = c(0, 1)), aes(x = x)) + 
   stat_function(fun = mystery_func)
 ```
 
+We will use the uniform distribution as the proposal $g(x)$. Hence, to compute $M$ so that $M g(x)$ such that $h(x) \leq M g(x)$, we simply need to compute the maximum of $h(x)$.
+
 ```{r Find the maximum of the function}
 optim(0.5, fn = mystery_func, control = list(fnscale=-1))
 ```
+We now run our script to do rejection sampling.
 
 ```{r Generate samples}
 S <- 10000
@@ -26,14 +30,19 @@ M <- 4.99
 proposal_generator <- function() {
   runif(1)
 }
-sampling_results <- rej_sampling_1d(S, target = mystery_func, proposal = dunif, proposal_generator = proposal_generator, M = M)
+sampling_results <- rej_sampling_1d(S, target = mystery_func, proposal = dunif, 
+                                    proposal_generator = proposal_generator, 
+                                    M = M)
 ```
+
+Compute an estimate $\hat c$ for the constant $c = \frac{f(x)}{h(x)}$.
 
 ```{r Estimate c}
 c_hat <- sampling_results$accept_rate * M
 c_hat
 ```
 
+Finally, we plot a histogram of the samples we obtained, against the graph of rescaled $h(x)$.
 
 ```{r Plot results}
 ggplot(data = tibble(x = sampling_results$samples)) + 
