@@ -5,3 +5,4 @@ Lecture slides
 - [Lecture 9](https://docs.google.com/presentation/d/19v2iPS62sZh_x_qwTOok5VclotDBhEnR1O8A3YLrwts/edit?usp=sharing) (12 Oct / 13 Oct)
 - [Lecture 10](https://docs.google.com/presentation/d/1lBt6XHOABFy6zvz6p-GA8er13NbdMu2I1XOj9uNut9w/edit?usp=sharing) (19 Oct / 20 Oct)
 - [Lecture 11](https://docs.google.com/presentation/d/1V-hstzBjjT06U45MM5UqSORudPIRm6BcN6bcmBZwR_0/edit?usp=sharing) (26 Oct / 27 Oct)
+- [Lecture 12](https://docs.google.com/presentation/d/1Tql8zNiDzvhrI1HCyHenPHI1YC-QzS5VypOGr_D9SPE/edit?usp=sharing) (2 Nov / 3 Nov)
