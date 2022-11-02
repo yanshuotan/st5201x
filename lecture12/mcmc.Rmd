@@ -1,0 +1,103 @@
+---
+title: "Markov chain Monte Carlo"
+author: Yan Shuo Tan
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(plotly)
+library(expm)
+library(LearnBayes)
+library(coda)
+source("mcmc_util.R")
+```
+
+# 1. Random walk on graph
+
+We consider the simple random walk on the following graph.
+
+```{r, echo=FALSE, out.width = '50%', fig.align="center"}
+knitr::include_graphics("graph.png")
+```
+
+The transition matrix $P$ for the simple random walk is as follows.
+
+```{r graph RW transition matrix}
+edges <- list(c(1, 2), c(1, 3), c(2, 3), c(2, 4), c(3, 4), c(3, 5))
+P <- make_rw_transition_matrix(5, edges, FALSE)
+P
+```
+
+Recall from the previous lecture that the stationary distribution can be found using the formula $\pi(k) = \frac{\text{deg}(k)}{2|E|}$, i.e. we have
+$$
+\pi = (1/6, 1/4, 1/3, 1/6, 1/12)
+$$
+We can approximate the stationary distribution by taking a high matrix power.
+```{r graph RW stationary distribution}
+P %^% 50
+```
+We now sample a trajectory from this chain and plot it.
+
+```{r sample from trajectory}
+T <- 100
+trajectory <- sample_trajectory(T, P, 1)
+plot_trajectory(trajectory)
+```
+
+
+```{r space and time averages, cache=TRUE}
+T <- 200
+M <- 200
+trajectories <- matrix(0, M, T+1)
+for (m in 1:M) {
+  trajectories[m, ] <- sample_trajectory(T, P, 1)
+}
+```
+
+
+```{r time average}
+table(trajectories[, T+1]) / M
+```
+
+```{r space average}
+table(trajectories[1, ]) / (T+1)
+```
+
+# 2. Metropolis-Hastings filter for random walk on graph
+
+We consider the same graph as in Part 1, but now our target distribution is
+$$
+\pi = \left(0.1, 0.1, 0.1, 0.2, 0.5\right).
+$$
+```{r mh space and time averages, cache=TRUE}
+target <- c(0.1, 0.1, 0.1, 0.2, 0.5)
+T <- 200
+M <- 200
+trajectories <- matrix(0, M, T+1)
+for (m in 1:M) {
+  trajectories[m, ] <- sample_mh_trajectory(T, P, 1, target)
+}
+```
+
+
+```{r mh time average}
+table(trajectories[, T+1]) / M
+```
+
+```{r mh space average}
+table(trajectories[1, ]) / (T+1)
+```
+We observe that the chain takes longer to converge to the stationary distribution. Since we are working with a finite state space chain, we can also write an updated transition matrix.
+
+```{r mh transition matrix}
+Q <- make_mh_transition_matrix(P, target)
+Q
+```
+
+```{r}
+print(Q %^% 50)
+print(Q %^% 100)
+print(Q %^% 500)
+```
