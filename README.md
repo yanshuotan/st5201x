@@ -6,3 +6,5 @@ Lecture slides
 - [Lecture 10](https://docs.google.com/presentation/d/1lBt6XHOABFy6zvz6p-GA8er13NbdMu2I1XOj9uNut9w/edit?usp=sharing) (19 Oct / 20 Oct)
 - [Lecture 11](https://docs.google.com/presentation/d/1V-hstzBjjT06U45MM5UqSORudPIRm6BcN6bcmBZwR_0/edit?usp=sharing) (26 Oct / 27 Oct)
 - [Lecture 12](https://docs.google.com/presentation/d/1Tql8zNiDzvhrI1HCyHenPHI1YC-QzS5VypOGr_D9SPE/edit?usp=sharing) (2 Nov / 3 Nov)
+
+Additional MCMC resource: [UCB Prob 140](http://prob140.org/textbook/content/Chapter_10/00_Markov_Chains.html)
