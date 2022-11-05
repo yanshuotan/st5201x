@@ -87,7 +87,7 @@ table(trajectories[, T+1]) / M
 ```
 
 ```{r mh time average}
-table(trajectories[3, ]) / (T+1)
+table(trajectories[5, ]) / (T+1)
 ```
 We observe that the chain takes longer to converge to the stationary distribution. Since we are working with a finite state space chain, we can also write an updated transition matrix.
 

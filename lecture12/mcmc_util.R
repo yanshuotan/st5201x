@@ -41,9 +41,7 @@ plot_trajectory <- function(trajectory) {
     geom_line(aes(x = t, y = y), color = "blue") + ylab("state")
 }
 
-
-# Metropolis-Hastings -----------------------------------------------------
-
+# Metropolis-Hastings on finite state space -------------------------------
 
 sample_mh_trajectory <- function(T, P, x0, pi) {
   # Function to sample a trajectory from a MC
@@ -87,12 +85,35 @@ make_mh_transition_matrix <- function(P, pi) {
 
 # Metropolis-Hastings on continuous state space ---------------------------
 
-mystery_function <- function(x, log = TRUE) {
-  term1 <- dgamma(x[[1]] + x[[2]], shape = 3, rate = 1, log = log)
-  term2 <- dnorm(2*x[[1]] - 1*x[[2]], log = log) 
-  if (log) {
-    term1 + term2
-  } else {
-    term1 * term2
+rwmetrop0 <- function(target, stepsize, x0, T, log = FALSE) {
+  # Function to compute the MH trajectory on continuous state space
+  # target: The target density to sample from
+  # stepsize: The step size (std) for the proposal normal distribution
+  # x0: The initial state
+  # T: The total number of time steps / iterations
+  # log: TRUE if target is supplied in log density form, FALSE otherwise
+  
+  d <- length(x0)
+  trajectory <- matrix(0, nrow = (T + 1), ncol = d) # For storing results
+  accept_count <- 0 
+  # Initialize trajectory
+  xt <- x0
+  trajectory[1, ] <- xt
+  for (t in 1:T) {
+    x_prop <- xt + rnorm(d, sd = stepsize)
+    # MH filter
+    if (log) {
+      r <- exp(target(x_prop) - target(xt))
+    } else {
+      r <- target(x_prop) / target(xt)
+    }
+    alpha <- min(r, 1)
+    U <- runif(1)
+    if (U < alpha) {
+      xt <- x_prop
+      accept_count <- accept_count + 1
+    }
+    trajectory[t+1, ] <- xt
   }
+  list(par = drop(trajectory), accept = accept_count / T)
 }
